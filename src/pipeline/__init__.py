@@ -1,6 +1,6 @@
 import copy
 from pathlib import Path
-from typing import Any, Dict, List, MutableMapping, Optional
+from typing import Any, Dict, MutableMapping, Optional
 from loguru import logger
 import torch
 from torch.nn import Module
@@ -36,7 +36,7 @@ class LogLRESPipeline(EndStepPipeline):
             summary_writer.add_scalar(
                 self.tag, lrs[-1], sym_tbl().train_sched.cur_step
             )
-        record_dir: Optional[Path] = sym_tbl().try_get_global("record_dir")
+        record_dir: Optional[Path] = sym_tbl().record_dir
         if self.log_file and record_dir is not None:
             with (record_dir / self.filename).open('a', encoding="utf8") as f:
                 f.write("{}\n".format(",".join(lrs)))
@@ -70,7 +70,7 @@ class LogTrainLossESPipeline(EndStepPipeline):
                 self.tag, loss, sym_tbl().train_sched.cur_step
             )
 
-        record_dir: Optional[Path] = sym_tbl().try_get_global("record_dir")
+        record_dir: Optional[Path] = sym_tbl().record_dir
         if self.log_file and record_dir is not None:
             with (record_dir / self.filename).open('a', encoding="utf8") as f:
                 f.write("{}\n".format(loss))

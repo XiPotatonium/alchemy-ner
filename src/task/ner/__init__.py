@@ -18,11 +18,11 @@ from ...util.vocab import build_dictionary, build_pos_dictionary, strip_vocab
 from .entities import EntityType
 
 
-@AlchemyTask.register("NerTask")
+@AlchemyTask.register()
 class NerTask(AlchemyTask):
     def __init__(self):
         super(NerTask, self).__init__()
-        record_dir: Optional[Path] = sym_tbl().try_get_global("record_dir")
+        record_dir: Optional[Path] = sym_tbl().record_dir
         meta_path = Path(self.cfg["meta"])
         with meta_path.open('r', encoding="utf8") as f:
             meta_info = json.load(f, object_pairs_hook=OrderedDict)

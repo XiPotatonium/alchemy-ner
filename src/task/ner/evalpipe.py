@@ -16,8 +16,8 @@ from .ner_scorer import NerScorer
 from . import NerTask
 
 
-@EvalPipeline.register("EvalNer")
-class EvalNerPipe(EvalPipeline):
+@EvalPipeline.register()
+class EvalNer(EvalPipeline):
     def __init__(
         self,
         varname: str,
@@ -44,7 +44,7 @@ class EvalNerPipe(EvalPipeline):
             "cls_score": cls_eval_score,
         }
 
-        save_dir: Optional[Path] = sym_tbl().try_get_global("record_dir")
+        save_dir: Optional[Path] = sym_tbl().record_dir
         if self.store_history and save_dir is not None:
             self.save_eval_history(save_dir / "evals.jsonl", eval_score)
 
@@ -130,12 +130,12 @@ class EvalNerPipe(EvalPipeline):
         logger.info(row_fmt % get_row(macro, 'macro'))
 
 
-@EvalPipeline.register("LogBest")
+@EvalPipeline.register()
 class LogBest(EvalPipeline):
     def __init__(self, metric: str = "f1_micro", **kwargs):
         super().__init__()
         self.metric = metric
-        self.save_dir: Optional[Path] = sym_tbl().try_get_global("record_dir")
+        self.save_dir: Optional[Path] = sym_tbl().record_dir
 
     def begin_eval(self, split: str, **kwargs):
         sym_tbl().try_set_global("best_info", {"epoch": -1, "step": -1})
@@ -160,7 +160,7 @@ class LogBest(EvalPipeline):
             best_info[self.metric] = score
             best_info["epoch"] = cur_epoch
             best_info["step"] = cur_step
-            save_dir: Optional[Path] = sym_tbl().try_get_global("record_dir")
+            save_dir: Optional[Path] = sym_tbl().record_dir
             if save_dir is not None:
                 with (save_dir / "best_info.json").open('w', encoding="utf8") as wf:
                     json.dump(best_info, wf, ensure_ascii=False)
@@ -170,7 +170,7 @@ class LogBest(EvalPipeline):
         return kwargs
 
 
-@EvalPipeline.register("LogTensorboard")
+@EvalPipeline.register()
 class LogTensorboard(EvalPipeline):
     def __init__(self, varname: str = "summary_writer", **kwargs) -> None:
         super().__init__()
@@ -203,7 +203,7 @@ class LogTensorboard(EvalPipeline):
                 summary_writer.add_scalar('{}/{}_{}'.format(label, tag, metric), score[metric], step)
 
 
-@EvalPipeline.register("SaveExamples")
+@EvalPipeline.register()
 class SaveExamples(EvalPipeline):
     def __init__(
         self,
@@ -221,7 +221,7 @@ class SaveExamples(EvalPipeline):
         preds = kwargs["preds"]
         task: NerTask = sym_tbl().task
 
-        record_dir: Optional[Path] = sym_tbl().try_get_global("record_dir")
+        record_dir: Optional[Path] = sym_tbl().record_dir
         # 保存详细的记录
         if record_dir is not None:
             save_dir = record_dir / self.save_dir
@@ -380,7 +380,7 @@ class SaveExamples(EvalPipeline):
         return html
 
 
-@EvalPipeline.register("SaveStepExamples")
+@EvalPipeline.register()
 class SaveStepExamples(SaveExamples):
     def __init__(
         self,
@@ -403,7 +403,7 @@ class SaveStepExamples(SaveExamples):
                 f"you may have to specify {AlchemyTrainScheduler.__name__} in config "
                 f"or use {SaveExamples.__name__} instead."
             )
-        record_dir: Optional[Path] = sym_tbl().try_get_global("record_dir")
+        record_dir: Optional[Path] = sym_tbl().record_dir
         # 保存详细的记录
         if record_dir is not None:
             save_dir = record_dir / self.save_dir
@@ -420,7 +420,7 @@ class SaveStepExamples(SaveExamples):
         return kwargs
 
 
-@EvalPipeline.register("SaveModel")
+@EvalPipeline.register()
 class SaveModel(EvalPipeline):
     def __init__(self, store_best: bool = False, store_all: bool = False, **kwargs) -> None:
         super().__init__()

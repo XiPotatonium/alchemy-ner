@@ -12,10 +12,9 @@ from alchemy.util import batch_to_device, filter_optional_cfg
 from alchemy.util.optim import prepare_trf_based_model_params
 from .model import Biaffine
 from ...task.ner import NerTask
-from ...criterion.gce_loss import generalized_cross_entropy
 
 
-@OutputPipeline.register("ProcBiaffine")
+@OutputPipeline.register()
 class ProcBiaffine(OutputPipeline):
     def __init__(self, **kwargs):
         super().__init__()
@@ -235,18 +234,7 @@ class AlchemyBiaffine(AlchemyModel):
             else:
                 weight[0] = nil_weight
 
-            if self.criterion_cfg["type"] == "gce":
-                q = self.criterion_cfg["q"]
-                if nil_weight != 1.0:
-                    raise NotImplementedError("GCE loss only support nil_weight = 1.0")
-                losses.append(generalized_cross_entropy(
-                    logits=flat_logits,
-                    targets=flat_gts,
-                    q=q,
-                    weight=weight,
-                    reduction="mean"
-                ))
-            elif self.criterion_cfg["type"] == "ce":
+            if self.criterion_cfg["type"] == "ce":
                 losses.append(F.cross_entropy(flat_logits, flat_gts, weight=weight, reduction="mean"))
             else:
                 raise ValueError(f"Unknown criterion {self.criterion_cfg}")

@@ -15,7 +15,7 @@ from . import NerTask
 from .entities import Sample, Mention, Token
 
 
-@DataPipeline.register("JsonLOpener")
+@DataPipeline.register()
 class JsonLOpener(ItrDataPipeline):
 
     def __init__(self, datapipe: Iterable[str], **kwargs):
@@ -29,7 +29,7 @@ class JsonLOpener(ItrDataPipeline):
                     yield json.loads(line)
 
 
-@DataPipeline.register("ParseJsonDoc")
+@DataPipeline.register()
 class ParseJsonDoc(ItrDataPipeline):
     def __init__(self, datapipe: ItrDataPipeline, **kwargs):
         super().__init__()
@@ -135,7 +135,7 @@ class ParseJsonDoc(ItrDataPipeline):
         return sample
 
 
-@DataPipeline.register("PruneLongText")
+@DataPipeline.register()
 class PruneLongText(ItrDataPipeline):
     def __init__(self, datapipe: ItrDataPipeline, **kwargs):
         super().__init__()
@@ -160,7 +160,7 @@ class PruneLongText(ItrDataPipeline):
         return True
 
 
-@DataPipeline.register("Sample2Encoding")
+@DataPipeline.register()
 class Sample2Encoding(ItrDataPipeline):
     def __init__(self, datapipe: ItrDataPipeline, **kwargs):
         super().__init__()
@@ -243,7 +243,7 @@ class Sample2Encoding(ItrDataPipeline):
         }
 
 
-@DataPipeline.register("SampleWithTags")
+@DataPipeline.register()
 class SampleWithTags(ItrDataPipeline):
     def __init__(self, datapipe: ItrDataPipeline, **kwargs):
         super().__init__()

@@ -17,7 +17,7 @@ from .model import PnRNet
 from .util import generate_boundary
 
 
-@OutputPipeline.register("ProcPnROutput")
+@OutputPipeline.register()
 class ProcPnROutput(OutputPipeline):
     def __init__(self, **kwargs):
         super().__init__()

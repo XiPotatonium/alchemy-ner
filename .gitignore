@@ -1,6 +1,7 @@
 /.vscode/
-# /data/
-# /records/
+/.alchemy-web/
+/data/
+/records/
 __pycache__
 
 /demo.py

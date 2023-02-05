@@ -7,7 +7,7 @@ from . import NerTask
 from .entities import EntityType, get_span_tokens
 
 
-@OutputPipeline.register("PrunePreds")
+@OutputPipeline.register()
 class PrunePreds(OutputPipeline):
     def __init__(self, preserve: List[str], **kwargs):
         super().__init__()
@@ -27,7 +27,7 @@ class PrunePreds(OutputPipeline):
         return ret
 
 
-@OutputPipeline.register("WithSampleInfo")
+@OutputPipeline.register()
 class WithSampleInfo(OutputPipeline):
     def __init__(self, **kwargs):
         super().__init__()
@@ -71,7 +71,7 @@ class WithSampleInfo(OutputPipeline):
         return ret
 
 
-@OutputPipeline.register("PruneNone")
+@OutputPipeline.register()
 class PruneNone(OutputPipeline):
     def __init__(self, none_tag: str = "None", **kwargs):
         super().__init__()
@@ -86,7 +86,7 @@ class PruneNone(OutputPipeline):
         return ret
 
 
-@OutputPipeline.register("PruneInvalidSpan")
+@OutputPipeline.register()
 class PruneInvalidSpan(OutputPipeline):
     def __init__(self, **kwargs):
         super().__init__()
@@ -100,7 +100,7 @@ class PruneInvalidSpan(OutputPipeline):
         return ret
 
 
-@OutputPipeline.register("PruneDuplicate")
+@OutputPipeline.register()
 class PruneDuplicate(OutputPipeline):
     def __init__(self, weight: Dict[str, float], **kwargs):
         super().__init__()
@@ -175,7 +175,7 @@ class FilterOverlapping(ABC, OutputPipeline):
         return False
 
 
-@OutputPipeline.register("PruneOverlappingByConfidence")
+@OutputPipeline.register()
 class PruneOverlappingByConfidence(FilterOverlapping):
     def __init__(self, weight: Dict[str, float], **kwargs):
         super().__init__()
@@ -185,7 +185,7 @@ class PruneOverlappingByConfidence(FilterOverlapping):
         return sum(w * pred[k] for k, w in self.weight.items())
 
 
-@OutputPipeline.register("FilterOverlappingByLen")
+@OutputPipeline.register()
 class FilterOverlappingByLen(FilterOverlapping):
     def __init__(self, **kwargs):
         super().__init__()
@@ -235,7 +235,7 @@ class FilterPartialOverlapping(ABC, OutputPipeline):
         return False
 
 
-@OutputPipeline.register("PrunePartialOverlappingByConfidence")
+@OutputPipeline.register()
 class PrunePartialOverlappingByConfidence(FilterPartialOverlapping):
     def __init__(self, weight: Dict[str, float], **kwargs):
         super().__init__()
@@ -245,7 +245,7 @@ class PrunePartialOverlappingByConfidence(FilterPartialOverlapping):
         return sum(w * pred[k] for k, w in self.weight.items())
 
 
-@OutputPipeline.register("FilterPartialOverlappingByLen")
+@OutputPipeline.register()
 class FilterPartialOverlappingByLen(FilterPartialOverlapping):
     def __init__(self, **kwargs):
         super().__init__()
@@ -254,7 +254,7 @@ class FilterPartialOverlappingByLen(FilterPartialOverlapping):
         return pred["end"] - pred["start"]
 
 
-@OutputPipeline.register("PruneByClsScore")
+@OutputPipeline.register()
 class PruneByClsScore(OutputPipeline):
     def __init__(self, threshold: float, **kwargs):
         super().__init__()
@@ -271,7 +271,7 @@ class PruneByClsScore(OutputPipeline):
         return ret
 
 
-@OutputPipeline.register("PruneByBoundaryScore")
+@OutputPipeline.register()
 class PruneByBoundaryScore(OutputPipeline):
     def __init__(self, threshold: float, **kwargs):
         super().__init__()
