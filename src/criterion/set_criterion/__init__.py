@@ -34,7 +34,7 @@ class NerSetCriterion:
             _type_: _description_
         """
         pred_logits = outputs["pred_logits"]        # bsz, n_queries, n_classes
-        query_nil_weight = outputs.get("query_nil_weight") 
+        query_nil_weight = outputs.get("query_nil_weight")
         pred_left = outputs["pred_left"]            # bsz, n_queries, sent_len
         pred_right = outputs["pred_right"]          # bsz, n_queries, sent_len
         # 因为matcher以及CE的需要，转换为flatten的形式
@@ -85,8 +85,8 @@ class NerSetCriterion:
         # Compute all the requested losses
         losses = {
             "cls": self._loss_labels(
-                pred_logits, gt_types_wo_nil, sizes, 
-                indices, num_spans, 
+                pred_logits, gt_types_wo_nil, sizes,
+                indices, num_spans,
                 query_nil_weight, cls_kl,
             ),
             "boundary": self._loss_boundary(
@@ -171,12 +171,12 @@ class NerSetCriterion:
             loss_cls = generalized_cross_entropy(logits, target_classes, self.kwargs["gce_q"], weight, reduction='none')
         else:
             raise NotImplementedError(self.cls_loss_type)
-        
+
         if query_nil_weight is not None:
             query_weight = query_nil_weight
             query_weight[idx] = 1       # 匹配上的部分的weight是1，只有nil会使用query nil weight
             loss_cls = loss_cls * query_weight.view(-1)
-        
+
         return torch.mean(loss_cls)
 
     def _loss_boundary(

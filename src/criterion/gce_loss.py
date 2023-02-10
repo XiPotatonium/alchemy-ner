@@ -14,7 +14,7 @@ class TruncatedLoss(nn.Module):
         self.q = q
         self.k = k
         self.weight = torch.nn.Parameter(data=torch.ones(trainset_size, 1), requires_grad=False)
-             
+
     def forward(self, logits, targets, indexes):
         p = F.softmax(logits, dim=1)
         Yg = torch.gather(p, 1, torch.unsqueeze(targets, 1))
@@ -31,11 +31,11 @@ class TruncatedLoss(nn.Module):
         Lqk = np.repeat(((1-(self.k**self.q))/self.q), targets.size(0))
         Lqk = torch.from_numpy(Lqk).type(torch.cuda.FloatTensor)
         Lqk = torch.unsqueeze(Lqk, 1)
-        
+
 
         condition = torch.gt(Lqk, Lq)
         self.weight[indexes] = condition.type(torch.cuda.FloatTensor)
-        
+
 
 
 # Generalized Cross Entropy Loss
@@ -52,16 +52,16 @@ class GCELoss(nn.Module):
         self.ignore_index = ignore_index
         self.reduction = reduction
         self.weight = weight
-        
+
     def forward(self, logits: Tensor, targets: Tensor) -> Tensor:
         return generalized_cross_entropy(logits, targets, self.q, self.weight, self.ignore_index, self.reduction)
 
 
 def generalized_cross_entropy(
-    logits: Tensor, 
-    targets: Tensor, 
-    q: int, 
-    weight: Optional[Tensor] = None, 
+    logits: Tensor,
+    targets: Tensor,
+    q: int,
+    weight: Optional[Tensor] = None,
     ignore_index: int = -100,
     reduction: str = "mean",
 ):
@@ -97,5 +97,3 @@ def generalized_cross_entropy(
         raise NotImplementedError(reduction)
 
     return loss
-    
-    

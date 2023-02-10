@@ -3,10 +3,11 @@ runner = "alchemy.runner.Trainer"
 plugins = [
     { type = "alchemy.plugins.BasicSetup" },
     { type = "alchemy.plugins.FileLogger", log_dir = "records/conll03/tagger/train", subdirs = ["detail_log"] },
-    { type = "alchemy.plugins.Backup", paths = ["alchemy", "src"] },
+    { type = "alchemy.plugins.Backup", paths = ["alchemy", "src"], ignore = ["__pycache__", "alchemy/web/*"] },
     { type = "alchemy.plugins.TensorboardLogger" },
     { type = "alchemy.plugins.Seeding", seed = 0, use_deterministic_algorithms = true },
     { type = "alchemy.plugins.DisplayRunningInfo" },
+    { type = "alchemy.web.plugins.MailOnFinish" },
 ]
 
 [task]
@@ -47,7 +48,7 @@ pipes = [
     { type = "src.task.ner.datapipe.PruneLongText" },
     { type = "src.task.ner.datapipe.Sample2Encoding" },
     { type = "src.task.ner.datapipe.SampleWithTags" },
-    { type = "alchemy.pipeline.itr.Batch", batch_size = 16 },
+    { type = "alchemy.pipeline.itr.Batch", batch_size = 32 },
     { type = "alchemy.pipeline.lst.ItrToLst", is_sized = false },
 ]
 

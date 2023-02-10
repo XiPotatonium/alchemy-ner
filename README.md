@@ -1,25 +1,22 @@
 # alchemy-ner
 
-SEE [alchemy](https://github.com/XiPotatonium/alchemy)
+You can directly create a project based on this template to develop your own NER models.
 
-注意clone的时候需要`git clone xxx.git --recursive`
+We implement the `src.task.ner.NerTask` based on `AlchemyTask`.
+Within `NerTask`, meta information, data processing, output processing and evaluation are defined.
 
-更新alchemy需要`git submodule foreach 'git pull'`
+We also implement some baselines for the convenience of comparison.
 
-## 依赖
+## Implemented baselines
 
-conda:
+* Tagging model (`src.models.tagger.Tagger`): A simple bert-base sequence tagger using BIO taggin scheme.
+* Biaffine (`src.models.biaffine.Biaffine`): A span-based model to detect nested named entities. [[code]](https://github.com/juntaoy/biaffine-ner) [[paper]](https://aclanthology.org/2020.acl-main.577).
+* Propose-and-Refine (`src.models.pnr.PnRNet`): A two-stage set prediction model to detect nested named entities. [[code]](https://github.com/XiPotatonium/pnr) [[paper]](https://www.ijcai.org/proceedings/2022/613).
 
-* rich
-* loguru
-* typer
-* tomlkit
-* pytorch
-* numpy
-* tensorboard (optional)
+## Meta information
 
-pip:
+## Data processing
 
-* fastapi (optional)
-* uvicorn (optional)
-* pynvml (如果用户自定义entry且不使用官方的alloc_cuda，那么不是必须的)
+## Output processing
+
+## Evaluation

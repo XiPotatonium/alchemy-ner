@@ -16,7 +16,6 @@ from ...task.ner.tagging import BioTaggingScheme, IOTaggingScheme, TaggingScheme
 from ...task.ner import NerTask
 from .model import Tagger
 
-
 @OutputPipeline.register()
 class ProcTaggingOutput(OutputPipeline):
     def __init__(self, **kwargs):

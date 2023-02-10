@@ -135,7 +135,6 @@ class LogBest(EvalPipeline):
     def __init__(self, metric: str = "f1_micro", **kwargs):
         super().__init__()
         self.metric = metric
-        self.save_dir: Optional[Path] = sym_tbl().record_dir
 
     def begin_eval(self, split: str, **kwargs):
         sym_tbl().try_set_global("best_info", {"epoch": -1, "step": -1})
