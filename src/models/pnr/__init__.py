@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Mapping, MutableMapping
+from typing import Any, Dict, List, Mapping, MutableMapping, Union
 from loguru import logger
 
 import torch
@@ -22,7 +22,7 @@ class ProcPnROutput(OutputPipeline):
     def __init__(self, **kwargs):
         super().__init__()
 
-    def __call__(self, outputs: Any, inputs: MutableMapping[str, Any]) -> Any:
+    def __call__(self, outputs: Union[Dict[str, Any], List], inputs: MutableMapping[str, Any]) -> Union[Dict[str, Any], List]:
         ret = []
 
         last_layer_outputs = outputs["stage2"][-1]

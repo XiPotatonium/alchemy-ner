@@ -4,9 +4,10 @@ from transformers import BertPreTrainedModel
 from transformers.modeling_outputs import BaseModelOutputWithPoolingAndCrossAttentions
 
 from alchemy.util import new_huggingface_model
+from torchcrf import CRF
 
 
-class Tagger(BertPreTrainedModel):
+class CRFTagger(BertPreTrainedModel):
     def __init__(
         self,
         config,
@@ -20,6 +21,7 @@ class Tagger(BertPreTrainedModel):
         self.num_tags = num_tags
         self.dropout = nn.Dropout(dropout)
         self.linear = nn.Linear(config.hidden_size, self.num_tags)
+        self.crf = CRF(self.num_tags, batch_first=True)
 
     def forward(
         self,
@@ -36,6 +38,6 @@ class Tagger(BertPreTrainedModel):
         _, _, hidden_size = hidden.size()
         start_index = token2start.unsqueeze(-1).expand(-1, -1, hidden_size)
         hidden = torch.gather(hidden, dim=1, index=start_index)
-        logits = self.linear.forward(self.dropout.forward(hidden))
+        emissions = self.linear.forward(self.dropout.forward(hidden))
 
-        return hidden, logits
+        return hidden, emissions

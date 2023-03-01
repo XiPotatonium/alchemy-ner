@@ -4,12 +4,6 @@ import torch
 from torch import nn, Tensor
 
 
-def my_cosine_similarity(feat: Tensor, cls_ebd: Tensor, eps=1e-08):
-    sim = torch.einsum("bcd,bzd->bcz", feat, cls_ebd.unsqueeze(0).expand(feat.size()[0], -1, -1))
-    cls_ebd_l2 = torch.norm(cls_ebd, p=2, dim=-1)
-    return sim / torch.max(cls_ebd_l2, torch.ones_like(cls_ebd_l2) * eps)
-
-
 class MaskAwareClassifier(nn.Module):
     def __init__(self, hidden_size: int, n_classes: int):
         super(MaskAwareClassifier, self).__init__()
@@ -21,7 +15,7 @@ class MaskAwareClassifier(nn.Module):
 
         Args:
             x:
-            masks (Optional[Tensor], optional): 
+            masks (Optional[Tensor], optional):
 
         Returns:
 
@@ -41,9 +35,9 @@ class MaskAwareSSNFuse(nn.Module):
         self.v = nn.Linear(embed_dim, 1)
 
     def forward(
-        self, 
-        query: Tensor, 
-        key: Tensor, 
+        self,
+        query: Tensor,
+        key: Tensor,
         key_padding_mask: Optional[Tensor] = None,
         query_padding_mask: Optional[Tensor] = None
     ) -> Tensor:

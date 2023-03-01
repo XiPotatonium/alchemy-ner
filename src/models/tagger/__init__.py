@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, MutableMapping, Optional
+from typing import Any, Dict, List, MutableMapping, Optional, Union
 from loguru import logger
 
 import torch
@@ -16,12 +16,13 @@ from ...task.ner.tagging import BioTaggingScheme, IOTaggingScheme, TaggingScheme
 from ...task.ner import NerTask
 from .model import Tagger
 
+
 @OutputPipeline.register()
 class ProcTaggingOutput(OutputPipeline):
     def __init__(self, **kwargs):
         super().__init__()
 
-    def __call__(self, outputs: Any, inputs: MutableMapping[str, Any]) -> Any:
+    def __call__(self, outputs: Union[Dict[str, Any], List], inputs: MutableMapping[str, Any]) -> Union[Dict[str, Any], List]:
         ret = []
         scheme: TaggingScheme = sym_tbl().model.tagging_scheme
 
@@ -174,6 +175,46 @@ class AlchemyTagger(AlchemyModel):
                 else:
                     raise NotImplementedError(f"Unknown criterion {self.criterion_cfg}")
                 loss = loss_fct.forward(flat_logits, flat_gts)
+
+            outputs["loss"] = self.backward.backward(loss, requires_grad=requires_grad)
+        return outputs
+
+
+@AlchemyModel.register("CRFTagger")
+class AlchemyCRFTagger(AlchemyTagger):
+    from .crf import CRFTagger
+
+    MODEL_CLASS = CRFTagger
+
+    def forward(
+        self,
+        batch: MutableMapping[str, Any],
+        needs_loss: bool,
+        requires_grad: bool,
+        **kwargs
+    ) -> MutableMapping[str, Any]:
+        batch = batch_to_device(batch, sym_tbl().device)
+
+        hidden, emissions = self.model.forward(
+            encodings=batch["encoding"],
+            encoding_masks=batch["encoding_masks"],
+            token2start=batch["token2start"],
+        )
+
+        token_masks = batch['token_masks']
+
+        tags = self.model.crf.decode(emissions, mask=token_masks)
+        outputs = {
+            "hidden": hidden,
+            "emissions":emissions,
+            "tags": tags,
+        }
+
+        if needs_loss:
+            loss = -self.model.crf.forward(
+                emissions, batch["gt_seq_labels"], mask=token_masks,
+                reduction="token_mean",
+            )
 
             outputs["loss"] = self.backward.backward(loss, requires_grad=requires_grad)
         return outputs

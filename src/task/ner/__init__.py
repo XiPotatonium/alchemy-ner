@@ -120,21 +120,11 @@ class NerTask(AlchemyTask):
         )
 
     def load_dataset(self, split: str, **kwargs):
-        logger.info(f"Load dataset {split}")
-
-        if "batch_size" not in kwargs:
-            kwargs["batch_size"] = None
-        pipes: List[Dict[str, Any]] = kwargs.pop("pipes")
         if "collate_fn" in kwargs:
             collate_fn_cfg = kwargs.pop("collate_fn")
             collate_fn = CollateFn.from_registry(collate_fn_cfg["type"], **collate_fn_cfg)
         else:
             collate_fn = DefaultCollateFn()
 
-        for i, p_cfg in enumerate(pipes):
-            if i == 0:
-                datapipe = DataPipeline.from_registry(p_cfg["type"], **p_cfg)
-            else:
-                datapipe = DataPipeline.from_registry(p_cfg["type"], datapipe, **p_cfg)
-
-        self._datasets[split] = (datapipe, {"collate_fn": collate_fn, **kwargs})
+        kwargs["collate_fn"] = collate_fn
+        super().load_dataset(split, **kwargs)

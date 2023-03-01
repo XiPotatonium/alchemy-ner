@@ -16,11 +16,10 @@ from .entities import Sample, Mention, Token
 
 
 @DataPipeline.register()
-class JsonLOpener(ItrDataPipeline):
+class JsonlLoader(ItrDataPipeline):
 
     def __init__(self, datapipe: Iterable[str], **kwargs):
-        super().__init__()
-        self.datapipe = datapipe
+        super().__init__(datapipe)
 
     def __iter__(self) -> Iterator:
         for file in self.datapipe:
@@ -32,14 +31,17 @@ class JsonLOpener(ItrDataPipeline):
 @DataPipeline.register()
 class ParseJsonDoc(ItrDataPipeline):
     def __init__(self, datapipe: ItrDataPipeline, **kwargs):
-        super().__init__()
-        self.datapipe = datapipe
+        super().__init__(datapipe)
         task: NerTask = sym_tbl().task
         self.entity_types = task.entity_types
         self.pos_vocab = task.pos_vocab
         self.token_vocab = task.token_vocab
         self.char_vocab = task.char_vocab
         self.tokenizer = task.tokenizer
+        self.max_positions = merge_max_position_constraints(
+            sym_tbl().task.max_positions(),
+            sym_tbl().model.max_positions()
+        )
 
     def __iter__(self) -> Iterator:
         for d in self.datapipe:
@@ -49,7 +51,8 @@ class ParseJsonDoc(ItrDataPipeline):
                 self.token_vocab,
                 self.pos_vocab,
                 self.char_vocab,
-                self.tokenizer
+                self.tokenizer,
+                self.max_positions,
             )
 
     @staticmethod
@@ -60,6 +63,7 @@ class ParseJsonDoc(ItrDataPipeline):
         pos_vocab: Vocab,
         char_vocab: Vocab,
         tokenizer: PreTrainedTokenizer,
+        max_positions: int,
     ) -> Sample:
         jtokens = jsample['tokens']
         jentities = jsample.get('entities', [])     # inference的时候可能没有entities
@@ -71,17 +75,18 @@ class ParseJsonDoc(ItrDataPipeline):
 
         special_tokens_map = tokenizer.special_tokens_map
         # 开头有一个[CLS]
-        encoding = [tokenizer.convert_tokens_to_ids(special_tokens_map['cls_token'])]
-        seg_encoding = [0]
+        lencoding = []
+        midencoding = []
+        rencoding = []
         char_encodings = []
 
         poss = [pos_vocab.word2idx.get(pos, pos_vocab.word2idx["<UNK>"]) for pos in jpos]
 
         # parse tokens
         for token in ltokens:
-            token_encoding = tokenizer.encode(token, add_special_tokens=False)
-            encoding += token_encoding
-            seg_encoding += [0] * len(token_encoding)
+            lencoding.extend(tokenizer.encode(token, add_special_tokens=False))
+        for token in rtokens:
+            rencoding.extend(tokenizer.encode(token, add_special_tokens=False))
 
         for i, token in enumerate(jtokens):
             token_encoding = tokenizer.encode(token, add_special_tokens=False)
@@ -91,7 +96,7 @@ class ParseJsonDoc(ItrDataPipeline):
                     token_encoding_char.append(char_vocab.word2idx[c])
                 else:
                     token_encoding_char.append(char_vocab.word2idx["<UNK>"])
-            span_start, span_end = (len(encoding), len(encoding) + len(token_encoding))
+            span_start, span_end = (len(midencoding), len(midencoding) + len(token_encoding))
             char_start, char_end = (len(char_encodings), len(char_encodings) + len(token_encoding_char))
             # TODO: case sensitive
             if token.lower() in token_vocab.word2idx:
@@ -99,16 +104,30 @@ class ParseJsonDoc(ItrDataPipeline):
             else:
                 inx = token_vocab.word2idx["<UNK>"]
             tokens.append(Token(i, span_start, span_end, token, poss[i], inx, char_start, char_end))
-            encoding += token_encoding
-            seg_encoding += [1] * len(token_encoding)
+            midencoding.extend(token_encoding)
             token_encoding_char += [char_vocab.word2idx['<EOT>']]
             char_encodings.append(token_encoding_char)
 
-        for token in rtokens:
-            token_encoding = tokenizer.encode(token, add_special_tokens=False)
-            encoding += token_encoding
-            seg_encoding += [0] * len(token_encoding)
-
+        encoding = [tokenizer.convert_tokens_to_ids(special_tokens_map['cls_token'])]
+        seg_encoding = [0]
+        if len(lencoding) + len(midencoding) + 2 >= max_positions:
+            # too long, skip lencoding
+            offset = len(encoding)
+            encoding.extend(midencoding)
+            encoding.extend(rencoding)
+            seg_encoding.extend([1] * len(midencoding))
+            seg_encoding.extend([0] * len(rencoding))
+        else:
+            encoding.extend(lencoding)
+            offset = len(encoding)
+            encoding.extend(midencoding)
+            encoding.extend(rencoding)
+            seg_encoding.extend([0] * len(lencoding))
+            seg_encoding.extend([1] * len(midencoding))
+            seg_encoding.extend([0] * len(rencoding))
+        for t in tokens:
+            t.span_start += offset
+            t.span_end += offset
         encoding += [tokenizer.convert_tokens_to_ids(special_tokens_map['sep_token'])]
         seg_encoding += [0]
 
@@ -138,8 +157,7 @@ class ParseJsonDoc(ItrDataPipeline):
 @DataPipeline.register()
 class PruneLongText(ItrDataPipeline):
     def __init__(self, datapipe: ItrDataPipeline, **kwargs):
-        super().__init__()
-        self.datapipe = datapipe
+        super().__init__(datapipe)
         self.max_positions = merge_max_position_constraints(
             sym_tbl().task.max_positions(),
             sym_tbl().model.max_positions()
@@ -153,7 +171,7 @@ class PruneLongText(ItrDataPipeline):
     @staticmethod
     def long_text_filter_predicate(sample: Sample, max_positions: Optional[int]) -> bool:
         if max_positions is not None and len(sample.encoding) > max_positions:
-            logger.warning("doc_id={} len = {} > {}, doc = {}".format(
+            logger.warning("sample_id = {}, len = {} > {}, sample = {}".format(
                 sample.id, len(sample.encoding), max_positions, sample.tokens
             ))
             return False
@@ -163,8 +181,7 @@ class PruneLongText(ItrDataPipeline):
 @DataPipeline.register()
 class Sample2Encoding(ItrDataPipeline):
     def __init__(self, datapipe: ItrDataPipeline, **kwargs):
-        super().__init__()
-        self.datapipe = datapipe
+        super().__init__(datapipe)
 
     def __iter__(self) -> Iterator:
         for d in self.datapipe:
@@ -246,8 +263,7 @@ class Sample2Encoding(ItrDataPipeline):
 @DataPipeline.register()
 class SampleWithTags(ItrDataPipeline):
     def __init__(self, datapipe: ItrDataPipeline, **kwargs):
-        super().__init__()
-        self.datapipe = datapipe
+        super().__init__(datapipe)
 
     def __iter__(self) -> Iterator:
         scheme: TaggingScheme = sym_tbl().model.tagging_scheme

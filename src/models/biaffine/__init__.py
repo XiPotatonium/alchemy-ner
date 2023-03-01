@@ -12,6 +12,7 @@ from alchemy.util import batch_to_device, filter_optional_cfg
 from alchemy.util.optim import prepare_trf_based_model_params
 from .model import Biaffine
 from ...task.ner import NerTask
+from ...criterion.gce_loss import generalized_cross_entropy
 
 
 @OutputPipeline.register()

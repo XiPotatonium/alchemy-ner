@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, MutableMapping
+from typing import Any, Dict, List, MutableMapping, Union
 
 from alchemy import sym_tbl
 from alchemy.pipeline import OutputPipeline
@@ -13,7 +13,7 @@ class PrunePreds(OutputPipeline):
         super().__init__()
         self.preserve = set(preserve)
 
-    def __call__(self, outputs: Any, inputs: MutableMapping[str, Any]) -> Any:
+    def __call__(self, outputs: Union[Dict[str, Any], List], inputs: MutableMapping[str, Any]) -> Union[Dict[str, Any], List]:
         ret = []
         for sample_output in outputs:
             sample_output = dict(sample_output)
@@ -32,7 +32,7 @@ class WithSampleInfo(OutputPipeline):
     def __init__(self, **kwargs):
         super().__init__()
 
-    def __call__(self, outputs: Any, inputs: MutableMapping[str, Any]) -> Any:
+    def __call__(self, outputs: Union[Dict[str, Any], List], inputs: MutableMapping[str, Any]) -> Union[Dict[str, Any], List]:
         task: NerTask = sym_tbl().task
         idx2entity_type: Dict[int, EntityType] = task.idx2entity_type
 
@@ -77,7 +77,7 @@ class PruneNone(OutputPipeline):
         super().__init__()
         self.none_tag = none_tag
 
-    def __call__(self, outputs: Any, inputs: MutableMapping[str, Any]) -> Any:
+    def __call__(self, outputs: Union[Dict[str, Any], List], inputs: MutableMapping[str, Any]) -> Union[Dict[str, Any], List]:
         ret = []
         for sample_outputs in outputs:
             sample_outputs = dict(sample_outputs)       # 拷贝一份，不要做inplace的修改
@@ -91,7 +91,7 @@ class PruneInvalidSpan(OutputPipeline):
     def __init__(self, **kwargs):
         super().__init__()
 
-    def __call__(self, outputs: Any, inputs: MutableMapping[str, Any]) -> Any:
+    def __call__(self, outputs: Union[Dict[str, Any], List], inputs: MutableMapping[str, Any]) -> Union[Dict[str, Any], List]:
         ret = []
         for sample_outputs in outputs:
             sample_outputs = dict(sample_outputs)       # 拷贝一份，不要做inplace的修改
@@ -109,7 +109,7 @@ class PruneDuplicate(OutputPipeline):
     def scorer(self, pred: Dict[str, Any]) -> float:
         return sum(w * pred[k] for k, w in self.weight.items())
 
-    def __call__(self, outputs: Any, inputs: MutableMapping[str, Any]) -> Any:
+    def __call__(self, outputs: Union[Dict[str, Any], List], inputs: MutableMapping[str, Any]) -> Union[Dict[str, Any], List]:
         ret = []
 
         for sample_outputs in outputs:
@@ -138,7 +138,7 @@ class PruneDuplicate(OutputPipeline):
 
 class FilterOverlapping(ABC, OutputPipeline):
 
-    def __call__(self, outputs: Any, inputs: MutableMapping[str, Any]) -> Any:
+    def __call__(self, outputs: Union[Dict[str, Any], List], inputs: MutableMapping[str, Any]) -> Union[Dict[str, Any], List]:
         ret = []
 
         for sample_outputs in outputs:
@@ -196,7 +196,7 @@ class FilterOverlappingByLen(FilterOverlapping):
 
 class FilterPartialOverlapping(ABC, OutputPipeline):
 
-    def __call__(self, outputs: Any, inputs: MutableMapping[str, Any]) -> Any:
+    def __call__(self, outputs: Union[Dict[str, Any], List], inputs: MutableMapping[str, Any]) -> Union[Dict[str, Any], List]:
         ret = []
 
         for sample_outputs in outputs:
@@ -260,7 +260,7 @@ class PruneByClsScore(OutputPipeline):
         super().__init__()
         self.threshold = threshold
 
-    def __call__(self, outputs: Any, inputs: MutableMapping[str, Any]) -> Any:
+    def __call__(self, outputs: Union[Dict[str, Any], List], inputs: MutableMapping[str, Any]) -> Union[Dict[str, Any], List]:
         ret = []
         for sample_outputs in outputs:
             sample_outputs = dict(sample_outputs)       # 拷贝一份，不要做inplace的修改
@@ -277,7 +277,7 @@ class PruneByBoundaryScore(OutputPipeline):
         super().__init__()
         self.threshold = threshold
 
-    def __call__(self, outputs: Any, inputs: MutableMapping[str, Any]) -> Any:
+    def __call__(self, outputs: Union[Dict[str, Any], List], inputs: MutableMapping[str, Any]) -> Union[Dict[str, Any], List]:
         ret = []
         for sample_outputs in outputs:
             sample_outputs = dict(sample_outputs)       # 拷贝一份，不要做inplace的修改
