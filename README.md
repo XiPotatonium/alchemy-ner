@@ -2,6 +2,12 @@
 
 You can directly create a project based on this template to develop your own NER models.
 
+To use alchemy, please initialize this submodule after cloning this repo by:
+
+```bash
+git submodule update --init --recursive
+```
+
 We implement the `src.task.ner.NerTask` based on `AlchemyTask`.
 Within `NerTask`, meta information, data processing, output processing and evaluation are defined.
 
