@@ -48,7 +48,7 @@ class WithSampleInfo(OutputPipeline):
             return new_output
 
         ret = []
-        for sample_outputs, raw_sample in zip(outputs, inputs["raw_sample"]):
+        for sample_outputs, raw_sample in zip(outputs, inputs["raw"]):
             gt_converted_entities = []
             for mention in raw_sample.mentions:
                 mention = mention.as_tuple_token()

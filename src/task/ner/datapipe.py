@@ -147,6 +147,7 @@ class ParseJsonDoc(ItrDataPipeline):
             char_encodings=char_encodings,
             seg_encoding=seg_encoding,
             truncated=too_long,
+            extra=jsample,
         )
 
         if too_long:
@@ -246,7 +247,7 @@ class Sample2Encoding(ItrDataPipeline):
             "gt_spans": gt_entity_spans_token,
             "gt_masks": gt_masks,
 
-            "raw_sample": sample,
+            "raw": sample,
         }
 
 
@@ -262,7 +263,7 @@ class SampleWithTags(ItrDataPipeline):
 
     @staticmethod
     def tagging(sample: Dict[str, Any], scheme: TaggingScheme):
-        raw_sample: Sample = sample["raw_sample"]
+        raw_sample: Sample = sample["raw"]
         gt_seq_labels = scheme.encode_tags(raw_sample.mentions, len(raw_sample.tokens), dtype=int)
         sample["gt_seq_labels"] = gt_seq_labels
         return sample

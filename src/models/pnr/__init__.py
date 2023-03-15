@@ -287,7 +287,7 @@ class AlchemyPnRNet(AlchemyModel):
                 stage1_output["proposal_left"] = proposal_left
                 stage1_output["proposal_right"] = proposal_right
 
-            # print(batch["raw_sample"])
+            # print(batch["raw"])
             stage1_criterion_cfg = self.criterion_cfg["stage1"]
             stage2_criterion_cfg = self.criterion_cfg["stage2"]
             sub_losses = []

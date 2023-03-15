@@ -3,7 +3,7 @@ TODO: 这里需要重构一下，span和range需要区分开，否则容易产�
 """
 
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 
 
 @dataclass
@@ -154,6 +154,7 @@ class Sample:
     char_encodings: List[List[int]]
     seg_encoding: List[int]
     truncated: bool         # Whether the sample is truncated due to too long input
+    extra: Dict[str, Any]
 
 
 def get_span_tokens(tokens, span):
