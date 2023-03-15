@@ -2,7 +2,7 @@ tag = "train"
 runner = "alchemy.runner.Trainer"
 plugins = [
     { type = "alchemy.plugins.BasicSetup" },
-    { type = "alchemy.plugins.FileLogger", log_dir = "records/conll03/tagger/train", subdirs = ["detail_log"] },
+    { type = "alchemy.plugins.FileLogger", log_dir = "records/ace04/pnr/train", subdirs = ["detail_log"] },
     { type = "alchemy.plugins.Backup", paths = ["alchemy", "src"], ignore = ["__pycache__", "alchemy/web/*"] },
     { type = "alchemy.plugins.TensorboardLogger" },
     { type = "alchemy.plugins.Seeding", seed = 0, use_deterministic_algorithms = true },
@@ -14,12 +14,12 @@ plugins = [
 type = "src.task.ner.NerTask"
 
 outputpipes = [     # 只有在eval和inference的时候会调用，train的时候不会
-    { type = "src.models.tagger.ProcTaggingOutput" },
+    { type = "src.models.pnr.ProcPnROutput" },
     { type = "src.task.ner.outputpipe.WithSampleInfo" },
     # { type = "alchemy.pipeline.output.SaveAppend", filename = "detail_log/preds_raw.jsonl" },
     { type = "src.task.ner.outputpipe.PruneNone" },
-    # { type = "src.task.ner.outputpipe.PruneInvalidSpan" },
-    # { type = "src.task.ner.outputpipe.PruneOverlappingByConfidence", weight = { type_score = 1.0, start_score = 0.5, end_score = 0.5 } },
+    { type = "src.task.ner.outputpipe.PruneInvalidSpan" },
+    { type = "src.task.ner.outputpipe.PruneOverlappingByConfidence", weight = { type_score = 1.0, start_score = 0.5, end_score = 0.5 } },
     # { type = "src.task.ner.outputpipe.PrunePartialOverlappingByConfidence", weight = { type_score = 1.0 } },
     # { type = "src.task.ner.outputpipe.PruneByClsScore", threshold = 0.9 },
     # { type = "src.task.ner.outputpipe.PruneByBoundaryScore", threshold = 0.9 },
@@ -35,73 +35,116 @@ evalpipes = [
     { type = "src.task.ner.evalpipe.SaveModel", store_best = true, store_all = false },
 ]
 
-meta = "/home/wsh/data/datasets/conll03/meta.json"
+meta = "/home/wsh/data/datasets/ace04/meta.json"
 
 [task.datasets.train]
 shuffle = true
 pipes = [
-    { type = "src.task.ner.datapipe.JsonlLoader", datapipe = ["/home/wsh/data/datasets/conll03/train.jsonl"] },
+    { type = "src.task.ner.datapipe.JsonlLoader", datapipe = ["/home/wsh/data/datasets/ace04/train.jsonl"] },
     { type = "alchemy.pipeline.itr.SplitByWorker" },
     # { type = "alchemy.pipeline.itr.Shuffle" },
     { type = "src.task.ner.datapipe.ParseJsonDoc" },
     # { type = "src.task.ner.datapipe.PruneLongText" },
     { type = "src.task.ner.datapipe.Sample2Encoding" },
-    { type = "src.task.ner.datapipe.SampleWithTags" },
-    { type = "alchemy.pipeline.itr.Batch", batch_size = 32 },
+    # { type = "src.task.ner.datapipe.SampleWithTags" },
+    { type = "alchemy.pipeline.itr.Batch", batch_size = 16 },
     { type = "alchemy.pipeline.lst.ItrToLst", is_sized = false },
 ]
 
 [task.datasets.dev]
 pipes = [
-    { type = "src.task.ner.datapipe.JsonlLoader", datapipe = ["/home/wsh/data/datasets/conll03/dev.jsonl"] },
+    { type = "src.task.ner.datapipe.JsonlLoader", datapipe = ["/home/wsh/data/datasets/ace04/dev.jsonl"] },
     { type = "alchemy.pipeline.itr.SplitByWorker" },
     { type = "src.task.ner.datapipe.ParseJsonDoc" },
     # { type = "src.task.ner.datapipe.PruneLongText" },
     { type = "src.task.ner.datapipe.Sample2Encoding" },
-    { type = "src.task.ner.datapipe.SampleWithTags" },
-    { type = "alchemy.pipeline.itr.Batch", batch_size = 32 },
+    # { type = "src.task.ner.datapipe.SampleWithTags" },
+    { type = "alchemy.pipeline.itr.Batch", batch_size = 16 },
     { type = "alchemy.pipeline.lst.ItrToLst", is_sized = false },
 ]
 
 [task.datasets.test]
 pipes = [
-    { type = "src.task.ner.datapipe.JsonlLoader", datapipe = ["/home/wsh/data/datasets/conll03/test.jsonl"] },
+    { type = "src.task.ner.datapipe.JsonlLoader", datapipe = ["/home/wsh/data/datasets/ace04/test.jsonl"] },
     { type = "alchemy.pipeline.itr.SplitByWorker" },
     { type = "src.task.ner.datapipe.ParseJsonDoc" },
     # { type = "src.task.ner.datapipe.PruneLongText" },
     { type = "src.task.ner.datapipe.Sample2Encoding" },
-    { type = "src.task.ner.datapipe.SampleWithTags" },
+    # { type = "src.task.ner.datapipe.SampleWithTags" },
     { type = "alchemy.pipeline.itr.Batch", batch_size = 32 },
     # { type = "alchemy.pipeline.lst.ItrToLst", is_sized = false },
 ]
 
 [sched]
 type = "alchemy.scheduler.LineWarmup"
-epochs = 10
-lr_warmup_steps = 100
+epochs = 5
+lr_warmup_steps = 1000
 
 pipes = [
-    { type = "alchemy.pipeline.sched.EvalESPipeline", period = 50 },
+    { type = "alchemy.pipeline.sched.EvalEEPipeline", period = 1 },
     # { type = "src.pipeline.LogTrainLossESPipeline", log_tensorboard = true, log_file = true },
     # { type = "src.pipeline.LogLRESPipeline", log_tensorboard = true, log_file = false },
 ]
 
 [model]
-type = "src.models.tagger.Tagger"
+type = "src.models.pnr.PnRNet"
+# model_path
 
 plm_type = "bert"
 plm_path = "/home/wsh/trf/bert-base-cased"
 tokenizer_path = "/home/wsh/trf/bert-base-cased"
 lowercase = false
 
+use_w2v = false
+# w2v_path =
+
+use_pos = false
+# pos_dim = 25
+
+use_char = false
+# char_dim = 50
+# char_lstm_layers = 1
+# char_lstm_drop = 0.1
+
+use_lstm = false
+lstm_layers = 3
+lstm_drop = 0.1
+
+pool_type = "max"
+
 dropout = 0.1
 
-[criterion]
-type = "ce"
+fpn_type = "uni"
+fpn_layers = 8
+fpn_drop = 0.1
+
+num_entity_queries = 30
+use_topk_query = true
+use_msf = false
+
+dec_layers = 1
+# dec_intermediate_size
+# dec_num_attention_heads
+
+[criterion.stage1]
+loss_weight = 1.0
+nil_weight = -1.0
+neg_ratio = 0.4
+
+[criterion.stage2]
+use_soft_proposal_boundary_matching = true
+soft_boundary_sigma = 2
+
+match_solver = "hungarian"
+loss_weight = {cls = 1.0, boundary = 1.0}
+match_weight = {cls = 1.0, boundary = 1.0}
+boundary_loss_type = "bce_softmax"
+deeply_weight = "same"
+nil_weight = -1.0
 
 [optim]
 type = "alchemy.optim.AdamW"
-lr = 1e-5
-trf_lr = 1e-5
+lr = 2e-5
+trf_lr = 2e-5
 weight_decay = 1e-4
 max_grad_norm = 1.0

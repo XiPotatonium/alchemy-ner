@@ -180,41 +180,41 @@ class AlchemyTagger(AlchemyModel):
         return outputs
 
 
-@AlchemyModel.register("CRFTagger")
-class AlchemyCRFTagger(AlchemyTagger):
-    from .crf import CRFTagger
-
-    MODEL_CLASS = CRFTagger
-
-    def forward(
-        self,
-        batch: MutableMapping[str, Any],
-        needs_loss: bool,
-        requires_grad: bool,
-        **kwargs
-    ) -> MutableMapping[str, Any]:
-        batch = batch_to_device(batch, sym_tbl().device)
-
-        hidden, emissions = self.model.forward(
-            encodings=batch["encoding"],
-            encoding_masks=batch["encoding_masks"],
-            token2start=batch["token2start"],
-        )
-
-        token_masks = batch['token_masks']
-
-        tags = self.model.crf.decode(emissions, mask=token_masks)
-        outputs = {
-            "hidden": hidden,
-            "emissions":emissions,
-            "tags": tags,
-        }
-
-        if needs_loss:
-            loss = -self.model.crf.forward(
-                emissions, batch["gt_seq_labels"], mask=token_masks,
-                reduction="token_mean",
-            )
-
-            outputs["loss"] = self.backward.backward(loss, requires_grad=requires_grad)
-        return outputs
+# @AlchemyModel.register("CRFTagger")
+# class AlchemyCRFTagger(AlchemyTagger):
+#     from .crf import CRFTagger
+#
+#     MODEL_CLASS = CRFTagger
+#
+#     def forward(
+#         self,
+#         batch: MutableMapping[str, Any],
+#         needs_loss: bool,
+#         requires_grad: bool,
+#         **kwargs
+#     ) -> MutableMapping[str, Any]:
+#         batch = batch_to_device(batch, sym_tbl().device)
+#
+#         hidden, emissions = self.model.forward(
+#             encodings=batch["encoding"],
+#             encoding_masks=batch["encoding_masks"],
+#             token2start=batch["token2start"],
+#         )
+#
+#         token_masks = batch['token_masks']
+#
+#         tags = self.model.crf.decode(emissions, mask=token_masks)
+#         outputs = {
+#             "hidden": hidden,
+#             "emissions":emissions,
+#             "tags": tags,
+#         }
+#
+#         if needs_loss:
+#             loss = -self.model.crf.forward(
+#                 emissions, batch["gt_seq_labels"], mask=token_masks,
+#                 reduction="token_mean",
+#             )
+#
+#             outputs["loss"] = self.backward.backward(loss, requires_grad=requires_grad)
+#         return outputs

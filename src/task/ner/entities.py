@@ -153,6 +153,7 @@ class Sample:
     encoding: List[int]
     char_encodings: List[List[int]]
     seg_encoding: List[int]
+    truncated: bool         # Whether the sample is truncated due to too long input
 
 
 def get_span_tokens(tokens, span):

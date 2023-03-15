@@ -8,7 +8,7 @@ from transformers import PreTrainedTokenizer
 from alchemy.pipeline import DataPipeline, ItrDataPipeline
 from alchemy.util import merge_max_position_constraints
 from alchemy import sym_tbl
-from .tagging import BioTaggingScheme, TaggingScheme
+from .tagging import TaggingScheme
 from ...util import pad_sequence_numpy
 from ...util.vocab import Vocab
 from . import NerTask
@@ -63,7 +63,7 @@ class ParseJsonDoc(ItrDataPipeline):
         pos_vocab: Vocab,
         char_vocab: Vocab,
         tokenizer: PreTrainedTokenizer,
-        max_positions: int,
+        max_positions: Optional[int] = None,
     ) -> Sample:
         jtokens = jsample['tokens']
         jentities = jsample.get('entities', [])     # inference的时候可能没有entities
@@ -75,28 +75,36 @@ class ParseJsonDoc(ItrDataPipeline):
 
         special_tokens_map = tokenizer.special_tokens_map
         # 开头有一个[CLS]
-        lencoding = []
-        midencoding = []
-        rencoding = []
+        encoding = [tokenizer.convert_tokens_to_ids(special_tokens_map['cls_token'])]
+        seg_encoding = [0]
         char_encodings = []
 
         poss = [pos_vocab.word2idx.get(pos, pos_vocab.word2idx["<UNK>"]) for pos in jpos]
 
+        too_long = False
         # parse tokens
         for token in ltokens:
-            lencoding.extend(tokenizer.encode(token, add_special_tokens=False))
-        for token in rtokens:
-            rencoding.extend(tokenizer.encode(token, add_special_tokens=False))
+            tok_enc = tokenizer.encode(token, add_special_tokens=False)
+            if too_long or (max_positions is not None and len(encoding) + len(tok_enc) + 1 > max_positions):
+                # +1 for [SEP]
+                too_long = True
+                break
+            encoding.extend(tok_enc)
+            seg_encoding.extend([0] * len(tok_enc))
 
         for i, token in enumerate(jtokens):
-            token_encoding = tokenizer.encode(token, add_special_tokens=False)
+            tok_enc = tokenizer.encode(token, add_special_tokens=False)
+            if too_long or (max_positions is not None and len(encoding) + len(tok_enc) + 1 > max_positions):
+                # +1 for [SEP]
+                too_long = True
+                break
             token_encoding_char = []
             for c in token:
                 if c in char_vocab.word2idx:
                     token_encoding_char.append(char_vocab.word2idx[c])
                 else:
                     token_encoding_char.append(char_vocab.word2idx["<UNK>"])
-            span_start, span_end = (len(midencoding), len(midencoding) + len(token_encoding))
+            span_start, span_end = (len(encoding), len(encoding) + len(tok_enc))
             char_start, char_end = (len(char_encodings), len(char_encodings) + len(token_encoding_char))
             # TODO: case sensitive
             if token.lower() in token_vocab.word2idx:
@@ -104,36 +112,25 @@ class ParseJsonDoc(ItrDataPipeline):
             else:
                 inx = token_vocab.word2idx["<UNK>"]
             tokens.append(Token(i, span_start, span_end, token, poss[i], inx, char_start, char_end))
-            midencoding.extend(token_encoding)
+            encoding.extend(tok_enc)
+            seg_encoding.extend([1] * len(tok_enc))
             token_encoding_char += [char_vocab.word2idx['<EOT>']]
             char_encodings.append(token_encoding_char)
 
-        encoding = [tokenizer.convert_tokens_to_ids(special_tokens_map['cls_token'])]
-        seg_encoding = [0]
-        if len(lencoding) + len(midencoding) + 2 >= max_positions:
-            # too long, skip lencoding
-            offset = len(encoding)
-            encoding.extend(midencoding)
-            encoding.extend(rencoding)
-            seg_encoding.extend([1] * len(midencoding))
-            seg_encoding.extend([0] * len(rencoding))
-        else:
-            encoding.extend(lencoding)
-            offset = len(encoding)
-            encoding.extend(midencoding)
-            encoding.extend(rencoding)
-            seg_encoding.extend([0] * len(lencoding))
-            seg_encoding.extend([1] * len(midencoding))
-            seg_encoding.extend([0] * len(rencoding))
-        for t in tokens:
-            t.span_start += offset
-            t.span_end += offset
+        for token in rtokens:
+            tok_enc = tokenizer.encode(token, add_special_tokens=False)
+            if too_long or (max_positions is not None and len(encoding) + len(tok_enc) + 1 > max_positions):
+                # +1 for [SEP]
+                too_long = True
+                break
+            encoding.extend(tok_enc)
+            seg_encoding.extend([0] * len(tok_enc))
+
         encoding += [tokenizer.convert_tokens_to_ids(special_tokens_map['sep_token'])]
         seg_encoding += [0]
 
         # parse entity mentions
         mentions = []
-
         for jentity in jentities:
             entity_type = entity_types[jentity['type']]
             start, end = jentity['start'], jentity['end']
@@ -148,8 +145,14 @@ class ParseJsonDoc(ItrDataPipeline):
             mentions=mentions,
             encoding=encoding,
             char_encodings=char_encodings,
-            seg_encoding=seg_encoding
+            seg_encoding=seg_encoding,
+            truncated=too_long,
         )
+
+        if too_long:
+            logger.warning("Truncate sample (id = {}) to length {}, raw sample = {}".format(
+                sample.id, max_positions, jtokens
+            ))
 
         return sample
 
@@ -158,24 +161,11 @@ class ParseJsonDoc(ItrDataPipeline):
 class PruneLongText(ItrDataPipeline):
     def __init__(self, datapipe: ItrDataPipeline, **kwargs):
         super().__init__(datapipe)
-        self.max_positions = merge_max_position_constraints(
-            sym_tbl().task.max_positions(),
-            sym_tbl().model.max_positions()
-        )
 
     def __iter__(self) -> Iterator:
-        for d in self.datapipe:
-            if self.long_text_filter_predicate(d, self.max_positions):
-                yield d
-
-    @staticmethod
-    def long_text_filter_predicate(sample: Sample, max_positions: Optional[int]) -> bool:
-        if max_positions is not None and len(sample.encoding) > max_positions:
-            logger.warning("sample_id = {}, len = {} > {}, sample = {}".format(
-                sample.id, len(sample.encoding), max_positions, sample.tokens
-            ))
-            return False
-        return True
+        for sample in self.datapipe:
+            if not sample.truncated:
+                yield sample
 
 
 @DataPipeline.register()

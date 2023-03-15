@@ -5,9 +5,19 @@ import torch
 from torch import nn, Tensor
 from torch.nn import Embedding
 from transformers import BertConfig
+import numpy as np
 
-from ..pyramid.init_util import init_linear
 from ..trf_enc import TrfEncoder
+
+
+def init_linear(input_linear):
+    """
+    Initialize linear transformation
+    """
+    bias = np.sqrt(6.0 / (input_linear.weight.size(0) + input_linear.weight.size(1)))
+    nn.init.uniform_(input_linear.weight, -bias, bias)
+    if input_linear.bias is not None:
+        input_linear.bias.data.zero_()
 
 
 class BasePyramidFeatureNet(nn.Module, ABC):
