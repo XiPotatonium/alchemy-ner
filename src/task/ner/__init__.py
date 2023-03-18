@@ -20,6 +20,10 @@ from .entities import EntityType
 
 @AlchemyTask.register()
 class NerTask(AlchemyTask):
+    """
+    BAD DESIGN. DO NOT FOLLOW:
+    The information for token encoding (e.g. char, pos, tokenizer) should be owned by datapipeline
+    """
     def __init__(self):
         super(NerTask, self).__init__()
         record_dir: Optional[Path] = sym_tbl().record_dir
@@ -88,13 +92,11 @@ class NerTask(AlchemyTask):
 
         for p_cfg in self.cfg.get("outputpipes", []):
             self.outputpipes.append(
-                # 注意这个时候ctx.task还是None，手动传一下task吧
                 OutputPipeline.from_registry(p_cfg["type"], **p_cfg)
             )
 
         for p_cfg in self.cfg.get("evalpipes", []):
             self.evalpipes.append(
-                # 注意这个时候ctx.task还是None，手动传一下task吧
                 EvalPipeline.from_registry(p_cfg["type"], **p_cfg)
             )
 
